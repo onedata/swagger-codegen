@@ -9,9 +9,7 @@ import io.swagger.models.Model;
 import io.swagger.models.Operation;
 import io.swagger.models.Response;
 import io.swagger.models.parameters.*;
-import io.swagger.models.properties.ArrayProperty;
-import io.swagger.models.properties.MapProperty;
-import io.swagger.models.properties.Property;
+import io.swagger.models.properties.*;
 import io.swagger.models.Swagger;
 import io.swagger.util.Yaml;
 
@@ -58,11 +56,18 @@ public class CowboyServerCodegen extends DefaultCodegen implements CodegenConfig
         languageSpecificPrimitives.add("float");
         languageSpecificPrimitives.add("boolean");
 
-        typeMapping.put("long", "Integer");
+
+
         typeMapping.put("string", "string");
-        typeMapping.put("integer", "Integer");
-        typeMapping.put("binary", "Bitstring");
-        typeMapping.put("array", "list");
+        typeMapping.put("ByteArray", "string");
+        typeMapping.put("boolean", "boolean");
+        typeMapping.put("double", "float");
+        typeMapping.put("float", "float");
+        typeMapping.put("string", "string");
+        typeMapping.put("integer", "integer");
+        typeMapping.put("long", "long");
+        typeMapping.put("map", "map");
+        typeMapping.put("number", "number");
 
         // remove modelPackage and apiPackage added by default
         cliOptions.clear();
@@ -77,13 +82,12 @@ public class CowboyServerCodegen extends DefaultCodegen implements CodegenConfig
         //setApiPackage("api");
 
         supportingFiles.add(new SupportingFile("rest_model.mustache", "", "rest_model.erl"));
-        //supportingFiles.add(new SupportingFile("rest_api.mustache", "", "rest_api.erl"));
 
-        //supportingFiles.add(new SupportingFile("Swaggering.rb", libFolder, "swaggering.rb"));
-        //supportingFiles.add(new SupportingFile("config.ru", "", "config.ru"));
-        //supportingFiles.add(new SupportingFile("Gemfile", "", "Gemfile"));
-        //supportingFiles.add(new SupportingFile("README.md", "", "README.md"));
-        //supportingFiles.add(new SupportingFile("swagger.mustache","","swagger.yaml"));
+    }
+
+    @Override
+    public String removeNonNameElementToCamelCase(String name) {
+        return removeNonNameElementToCamelCase(name, "[-:;#]");
     }
 
     @Override
@@ -202,20 +206,62 @@ public class CowboyServerCodegen extends DefaultCodegen implements CodegenConfig
         return outputFolder + File.separator + apiPackage.replace("/", File.separator);
     }
 
-    @Override
-    public String getTypeDeclaration(Property p) {
-        if (p instanceof ArrayProperty) {
+    public String getTypeDeclarationNoOptionalCheck(Property p) {
+        if(p instanceof ObjectProperty && p.getName()!=null) {
+            //return toModelName(((ObjectProperty)p).getType())+"_model()";
+            //ObjectProperty op = (ObjectProperty)p;
+            //return toModelName(op.getName()) + "_model()";
+            String result = "#{ ";
+            for(String subproperty_key : ((ObjectProperty) p).getProperties().keySet()) {
+                Property subproperty = ((ObjectProperty) p).getProperties().get(subproperty_key);
+                result = toVarName(subproperty.getName()) + " => " + getTypeDeclaration(subproperty) +",";
+            }
+            return result;
+        }
+        else if (p instanceof RefProperty) {
+            RefProperty rp = (RefProperty)p;
+            return toModelName(rp.get$ref().substring(rp.get$ref().lastIndexOf('/') + 1))+"_model()";
+        }
+        else if (p instanceof ArrayProperty) {
             ArrayProperty ap = (ArrayProperty) p;
             Property inner = ap.getItems();
-            return getSwaggerType(p) + "[" + getTypeDeclaration(inner) + "]";
+            return "[" + getTypeDeclaration(inner) + "]";
         }
         else if (p instanceof MapProperty) {
             MapProperty mp = (MapProperty) p;
             Property inner = mp.getAdditionalProperties();
             //return getSwaggerType(p) + "[string," + getTypeDeclaration(inner) + "]";
-            return "#{  }";
+            return "#{ '_' => " + getTypeDeclaration(inner) + "}";
         }
-        return super.getTypeDeclaration(p);
+        else if(p instanceof StringProperty) {
+            StringProperty sp = (StringProperty)p;
+            return "string";
+        }
+        /*else if(p instanceof StringProperty) {
+            if( (((StringProperty)p).getEnum() != null) && (!((StringProperty)p).getEnum().isEmpty()) ) {
+                return "atom";
+            }
+            else {
+                return "string";
+            }
+        }*/
+        else if(p.getVendorExtensions().containsKey("x-erlang-datatype")) {
+            return (String)p.getVendorExtensions().get("x-erlang-datatype");
+        }
+        else {
+            return super.getTypeDeclaration(p); //+"__"+p.getClass().toString();
+        }
+    }
+
+    @Override
+    public String getTypeDeclaration(Property p) {
+        if(!p.getRequired()) {
+            return " {" + getTypeDeclarationNoOptionalCheck(p) + ", optional}";
+        }
+        else {
+            return getTypeDeclarationNoOptionalCheck(p);
+        }
+
     }
 
     @Override
@@ -227,7 +273,8 @@ public class CowboyServerCodegen extends DefaultCodegen implements CodegenConfig
             if (languageSpecificPrimitives.contains(type)) {
                 return type;
             }
-        } else {
+        }
+        else {
             type = swaggerType;
         }
         if (type == null) {
@@ -251,6 +298,7 @@ public class CowboyServerCodegen extends DefaultCodegen implements CodegenConfig
             name = name.toLowerCase();
         }
 
+        /*
         // petId => pet_id
         name = underscore(name);
 
@@ -258,6 +306,7 @@ public class CowboyServerCodegen extends DefaultCodegen implements CodegenConfig
         if (isReservedWord(name) || name.matches("^\\d.*")) {
             name = escapeReservedWord(name);
         }
+        */
 
         return name;
     }
@@ -277,7 +326,7 @@ public class CowboyServerCodegen extends DefaultCodegen implements CodegenConfig
 
         // camelize the model name
         // phone_number => PhoneNumber
-        return name;
+        return underscore(name);
     }
 
     @Override
