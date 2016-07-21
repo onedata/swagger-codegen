@@ -225,7 +225,7 @@ public class CowboyServerCodegen extends DefaultCodegen implements CodegenConfig
         else if (p instanceof ArrayProperty) {
             ArrayProperty ap = (ArrayProperty) p;
             Property inner = ap.getItems();
-            return "[" + getTypeDeclaration(inner) + "]";
+            return "[" + getTypeDeclaration(inner.getType()) + "]";
         }
         else if (p instanceof MapProperty) {
             MapProperty mp = (MapProperty) p;
@@ -255,12 +255,12 @@ public class CowboyServerCodegen extends DefaultCodegen implements CodegenConfig
 
     @Override
     public String getTypeDeclaration(Property p) {
-        if(!p.getRequired()) {
-            return " {" + getTypeDeclarationNoOptionalCheck(p) + ", optional}";
-        }
-        else {
-            return getTypeDeclarationNoOptionalCheck(p);
-        }
+        //if(!p.getRequired()) {
+        //    return " {" + getTypeDeclarationNoOptionalCheck(p) + ", optional}";
+        //}
+        //else {
+        return getTypeDeclarationNoOptionalCheck(p);
+        //}
 
     }
 
