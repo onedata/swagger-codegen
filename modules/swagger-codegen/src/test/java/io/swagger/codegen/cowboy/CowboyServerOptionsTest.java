@@ -26,6 +26,9 @@ public class CowboyServerOptionsTest extends AbstractOptionsTest {
     @Override
     protected void setExpectations() {
         new Expectations(clientCodegen) {{
+            clientCodegen.setApiFileNameSuffix(
+                    CowboyServerOptionsProvider.API_FILE_NAME_SUFFIX);
+            times = 1;
         }};
     }
 }

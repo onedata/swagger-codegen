@@ -27,6 +27,9 @@ public class CowboyServerCodegen extends DefaultCodegen implements CodegenConfig
     protected String moduleName;
     protected String libFolder = "lib";
 
+    protected String apiFileNameSuffix = "_api";
+    public static final String API_FILE_NAME_SUFFIX = "apiFileNameSuffix";
+
     public CowboyServerCodegen() {
         super();
         outputFolder = "generated-code" + File.separator + "cowboy";
@@ -37,6 +40,13 @@ public class CowboyServerCodegen extends DefaultCodegen implements CodegenConfig
         apiTemplateFiles.put("rest_api.mustache", ".erl");
         
         embeddedTemplateDir = templateDir = "./";
+
+        // remove modelPackage and apiPackage added by default
+        cliOptions.clear();
+
+        // define additional cli options
+        cliOptions.add(CliOption.newString(API_FILE_NAME_SUFFIX,
+                "Default suffix added to generated api file names").defaultValue("_api"));
 
         typeMapping.clear();
         languageSpecificPrimitives.clear();
@@ -69,13 +79,16 @@ public class CowboyServerCodegen extends DefaultCodegen implements CodegenConfig
         typeMapping.put("map", "map");
         typeMapping.put("number", "number");
 
-        // remove modelPackage and apiPackage added by default
-        cliOptions.clear();
     }
 
     @Override
     public void processOpts() {
         super.processOpts();
+
+        if (additionalProperties.containsKey(API_FILE_NAME_SUFFIX)) {
+            setApiFileNameSuffix(additionalProperties.get(API_FILE_NAME_SUFFIX).toString());
+            additionalProperties.put("apiFileNameSuffix", apiFileNameSuffix);
+        }
 
         // use constant model/api package (folder path)
         //setModelPackage("models");
@@ -83,6 +96,10 @@ public class CowboyServerCodegen extends DefaultCodegen implements CodegenConfig
 
         supportingFiles.add(new SupportingFile("rest_model.mustache", "", "rest_model.erl"));
 
+    }
+
+    public void setApiFileNameSuffix(String apiFileNameSuffix){
+        this.apiFileNameSuffix = apiFileNameSuffix;
     }
 
     @Override
@@ -347,7 +364,7 @@ public class CowboyServerCodegen extends DefaultCodegen implements CodegenConfig
         name = name.replaceAll("-", "_"); // FIXME: a parameter should not be assigned. Also declare the methods parameters as 'final'.
 
         // e.g. PhoneNumberApi.rb => phone_number_api.rb
-        return underscore(name) + "_api";
+        return underscore(name) + apiFileNameSuffix;
     }
 
     @Override
