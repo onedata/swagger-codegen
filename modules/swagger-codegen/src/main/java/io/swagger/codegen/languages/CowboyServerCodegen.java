@@ -199,6 +199,17 @@ public class CowboyServerCodegen extends DefaultCodegen implements CodegenConfig
     }
 
     @Override
+    public String sanitizeTag(String tag) {
+        tag = tag.toLowerCase();
+        String returnTag = tag.replaceAll(" ", "_");
+        if (returnTag.matches("\\d.*")) {
+            return "_" + returnTag;
+        } else {
+            return returnTag;
+        }
+    }
+
+    @Override
     public CodegenType getTag() {
         return CodegenType.SERVER;
     }
