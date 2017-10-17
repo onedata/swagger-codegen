@@ -253,7 +253,7 @@ public class CowboyServerCodegen extends DefaultCodegen implements CodegenConfig
         else if (p instanceof ArrayProperty) {
             ArrayProperty ap = (ArrayProperty) p;
             Property inner = ap.getItems();
-            return "[" + getTypeDeclaration(inner.getType()) + "]";
+            return "[" + getTypeDeclaration(inner) + "]";
         }
         else if (p instanceof MapProperty) {
             MapProperty mp = (MapProperty) p;
